@@ -133,7 +133,7 @@ extern Error *volatile __error;
 // Used in error messages
 extern const char *__progname;
 
-extern stack_t __env_stack;
+extern vp_stack_t __env_stack;
 
 extern jmp_buf *volatile __try_env;
 
