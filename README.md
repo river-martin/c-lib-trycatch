@@ -1,4 +1,4 @@
-# C Lib TryCatch
+# c-lib-trycatch
 
 This library defines the macros `try` and `catch(err_type, err_ident)`, and the type `Error`.
 
