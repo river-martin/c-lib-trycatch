@@ -1,0 +1,3 @@
+[submodule "c-lib-stack"]
+	path = c-lib-stack
+	url = https://github.com/river-martin/c-lib-stack

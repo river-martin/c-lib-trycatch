@@ -1,4 +1,5 @@
 #include "../src/trycatch.h"
+
 #include <assert.h>
 #include <stdarg.h>
 #include <stdbool.h>

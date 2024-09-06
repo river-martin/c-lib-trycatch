@@ -14,7 +14,7 @@ DFLAGS    ?= # -DDEBUG
 
 # linker flags
 
-LDFLAGS := $(ASAN_FLAGS) -Lbuild -L/usr/local/lib
+LDFLAGS := $(ASAN_FLAGS) -ltrycatch -lstack
 
 # commands
 
@@ -22,7 +22,7 @@ COMPILE:=$(CC) $(CFLAGS) $(DFLAGS)
 
 # targets
 
-lib: build/libtrycatch.a
+lib: build build/libtrycatch.a
 
 tests: build $(ALL_OBJ_FILES) test_error test_try_catch
 
@@ -76,9 +76,6 @@ uninstall:
 
 clean:
 	rm -f test_error test_try_catch
-	rm -f build/src/*.o build/tests/*.o
-	rmdir build/src build/tests
-	rm -f build/*.a
-	rmdir build
+	rm -rf build
 
 .PHONY: install uninstall clean tests lib

@@ -8,11 +8,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "../c-lib-stack/src/stack.h"
+
 // Macros
 
 #define MAX_ERR_MSG_LEN 256
 #define BT_BUF_SIZE     256
 
+#define __peek_jmp_buf(__env_stack) (*((jmp_buf *) (__env_stack.top->item)))
 // Function macros
 
 /**
@@ -21,11 +24,9 @@
  *
  * Usage: `try { ... } catch(err_type) { ... }`
  */
-#define try                                             \
-    jmp_buf *volatile __prev = __try_env;               \
-    volatile jmp_buf __current_jmp_buf;                 \
-    __try_env = (jmp_buf *volatile) &__current_jmp_buf; \
-    if (setjmp(*__try_env) == 0)
+#define try                                      \
+    push(&__env_stack, malloc(sizeof(jmp_buf))); \
+    if (setjmp(__peek_jmp_buf(__env_stack)) == 0)
 
 /**
  * Catch the error of type `err_type`.
@@ -34,13 +35,12 @@
  *
  * @param err_type The `const ErrType` of the error to catch
  */
-#define catch(err_type, err_ident)                                     \
-    else if ((__try_env = __prev,                                      \
-              __error && (strcmp(#err_type, __error->type_name) ==     \
-                          0))) for (err_type err_ident = *__error;     \
-                                    __error ? (free((void *) __error), \
-                                               __error = NULL, true)   \
-                                            : false;)
+#define catch(err_type, err_ident)                                          \
+    else if (__error && (strcmp(#err_type, __error->type_name) ==           \
+                         0)) for (err_type err_ident = *__error;            \
+                                  __error ? (free(__error), __error = NULL, \
+                                             pop(&__env_stack), true)       \
+                                          : false;)
 
 /**
  * Usage: `throw(new_Error("An error occurred"))`
@@ -53,13 +53,13 @@
  *
  * @param err The `Error` to throw.
  */
-#define throw(err)                        \
-    {                                     \
-        assert(!__error);                 \
-        __error  = malloc(sizeof(Error)); \
-        *__error = err;                   \
-        assert(__try_env);                \
-        longjmp(*__try_env, 1);           \
+#define throw(err)                                          \
+    {                                                       \
+        assert(!__error);                                   \
+        __error  = malloc(sizeof(Error));                   \
+        *__error = err;                                     \
+        assert(__env_stack.top);                            \
+        longjmp(*((jmp_buf *) (__env_stack.top->item)), 1); \
     }
 
 // Type definitions
@@ -132,6 +132,8 @@ extern Error *volatile __error;
 
 // Used in error messages
 extern const char *__progname;
+
+extern stack_t __env_stack;
 
 extern jmp_buf *volatile __try_env;
 

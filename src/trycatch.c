@@ -1,10 +1,15 @@
 #include "trycatch.h"
+#include "../c-lib-stack/src/stack.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-jmp_buf *volatile __try_env = NULL;
-Error *volatile __error     = NULL;
+/**
+ * @brief A stack of jmp_bufs (needed to support nested try-catch blocks).
+ */
+stack_t __env_stack = { .top = NULL };
+
+Error *volatile __error = NULL;
 
 Error new_Error(const char *msg_fmt, ...)
 {
