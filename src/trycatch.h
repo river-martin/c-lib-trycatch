@@ -1,0 +1,138 @@
+#ifndef _TRYCATCH_H
+#define _TRYCATCH_H
+
+#include <assert.h>
+#include <setjmp.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+// Macros
+
+#define MAX_ERR_MSG_LEN 256
+#define BT_BUF_SIZE     256
+
+// Function macros
+
+/**
+ * Start a `try-catch` expression. The `try` block must be
+ * followed by one or more `catch(err_type)` blocks.
+ *
+ * Usage: `try { ... } catch(err_type) { ... }`
+ */
+#define try                                             \
+    jmp_buf *volatile __prev = __try_env;               \
+    volatile jmp_buf __current_jmp_buf;                 \
+    __try_env = (jmp_buf *volatile) &__current_jmp_buf; \
+    if (setjmp(*__try_env) == 0)
+
+/**
+ * Catch the error of type `err_type`.
+ *
+ * Usage: `try { ... } catch(err_type, err_ident) { ... }`
+ *
+ * @param err_type The `const ErrType` of the error to catch
+ */
+#define catch(err_type, err_ident)                                     \
+    else if ((__try_env = __prev,                                      \
+              __error && (strcmp(#err_type, __error->type_name) ==     \
+                          0))) for (err_type err_ident = *__error;     \
+                                    __error ? (free((void *) __error), \
+                                               __error = NULL, true)   \
+                                            : false;)
+
+/**
+ * Usage: `throw(new_Error("An error occurred"))`
+ *
+ * Throws the given `Error`. This macro should only be used inside a `try`
+ * block.
+ *
+ * The `Error` is copied to the heap so that it can be accessed after the
+ * `longjmp`, by the `catch` macro.
+ *
+ * @param err The `Error` to throw.
+ */
+#define throw(err)                        \
+    {                                     \
+        assert(!__error);                 \
+        __error  = malloc(sizeof(Error)); \
+        *__error = err;                   \
+        assert(__try_env);                \
+        longjmp(*__try_env, 1);           \
+    }
+
+// Type definitions
+
+/**
+ * The base error struct (associated with `const ErrType BASE_ERR_TYPE`). All
+ * other error types should extend or use this struct.
+ */
+typedef struct error {
+    const char *type_name; /**< The name of this type of error */
+
+    /**
+     * Initializes the given Error * with the given format string and
+     * arguments.
+     *
+     * @param self    The Error * to initialize
+     * @param msg_fmt The format string for the error message (see vsprintf for
+     * details)
+     * @param args    The va_list of arguments to be formatted into the message
+     * string
+     */
+    void (*__init__)(struct error *self, const char *msg_fmt, va_list args);
+
+    char  msg[MAX_ERR_MSG_LEN]; /**< The error message */
+    void *backtrace_buf[BT_BUF_SIZE];
+    int   backtrace_size;
+} Error;
+
+// Function prototypes
+
+/**
+ * Allocates memory for a new Error struct and initializes it's message field
+ * with the given format string and arguments.
+ *
+ * Example usage:
+ * new_Error("%s:%d: %s", __FILE__, __LINE__, "An error
+ * occurred");`
+ *
+ * @param msg_fmt The format string for the error message (see printf for
+ * details)
+ * @param ...     The arguments to be formatted into the message string
+ */
+extern Error new_Error(const char *msg_fmt, ...);
+
+/**
+ * The same as new_Error, but takes a va_list instead of a variable number of
+ * arguments.
+ *
+ * @param msg_fmt The format string for the error message (see printf for
+ * details)
+ * @param args    The va_list of arguments to be formatted into the message
+ * string
+ */
+extern Error va_new_Error(const char *msg_fmt, va_list args);
+
+/**
+ * Initializes the given Error * with the given format string and
+ * arguments.
+ *
+ * @param self    The Error * to initialize
+ * @param msg_fmt The format string for the error message (see vsprintf for
+ * details)
+ * @param args    The va_list of arguments to be formatted into the message
+ * string
+ */
+extern void __va_init_Error(Error *self, const char *msg_fmt, va_list args);
+
+// Global error variable (set when an error is thrown)
+extern Error *volatile __error;
+
+// Used in error messages
+extern const char *__progname;
+
+extern jmp_buf *volatile __try_env;
+
+#endif // _TRYCATCH_H
