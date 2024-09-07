@@ -16,13 +16,12 @@
 #define BT_BUF_SIZE     256
 
 #define __peek_jmp_buf(__env_stack) (*((jmp_buf *) (__env_stack.top->item)))
-// Function macros
 
 /**
  * Start a `try-catch` expression. The `try` block must be
- * followed by one or more `catch(err_type)` blocks.
+ * followed by one or more `catch(err_type, err_ident)` blocks.
  *
- * Usage: `try { ... } catch(err_type) { ... }`
+ * Usage: `try { ... } catch(err_type, err_ident) { ... }`
  */
 #define try                                      \
     push(&__env_stack, malloc(sizeof(jmp_buf))); \
