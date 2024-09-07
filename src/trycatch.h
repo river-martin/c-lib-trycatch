@@ -32,7 +32,8 @@
  *
  * Usage: `try { ... } catch(err_type, err_ident) { ... }`
  *
- * @param err_type The `const ErrType` of the error to catch
+ * @param err_type The type of error to catch
+ * @param err_ident The identifier to use for the caught error
  */
 #define catch(err_type, err_ident)                                          \
     else if (__error && (strcmp(#err_type, __error->type_name) ==           \
