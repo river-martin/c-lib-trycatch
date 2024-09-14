@@ -12,64 +12,47 @@ EXTRA     := -std=c11 -fPIC
 CFLAGS    := $(DEBUG) $(OPTIMISE) $(WARNING) $(EXTRA)
 DFLAGS    ?= # -DDEBUG
 
-# library dependencies
-SUBLIBFLAGS := $(shell git submodule foreach --recursive --quiet 'echo -L$$displaypath')
-SUBLIBFLAGS += -lstack
-SUBLIBS := libstack.a
+# dependencies
+DEPS := c-lib-stack/libstack.a
 
 # linker flags
 
-LDFLAGS := $(ASAN_FLAGS) -L. -ltrycatch $(SUBLIBFLAGS)
+LDFLAGS := $(ASAN_FLAGS) -L. -ltrycatch
 
 # commands
 
 COMPILE:=$(CC) $(CFLAGS) $(DFLAGS)
 
-# targets
+# files
 
-lib: libtrycatch.a
-
-tests: build $(ALL_OBJ_FILES) test_error test_try_catch
-
-SRC_C_FILES := $(wildcard src/*.c)
-SRC_H_FILES := $(wildcard src/*.h)
+CODE_FILES := $(wildcard src/*.c src/*.h tests/*.c tests/*.h)
 SRC_OBJ_FILES := $(patsubst src/%.c, build/src/%.o, $(SRC_C_FILES))
-
-TESTS_C_FILES := $(wildcard tests/*.c)
-TESTS_H_FILES := $(wildcard tests/*.h)
 TESTS_OBJ_FILES := $(patsubst tests/%.c, build/tests/%.o, $(TESTS_C_FILES))
 
-ALL_C_FILES := $(SRC_C_FILES) $(TESTS_C_FILES)
-ALL_H_FILES := $(SRC_H_FILES) $(TESTS_H_FILES)
-ALL_OBJ_FILES := $(SRC_OBJ_FILES) $(TESTS_OBJ_FILES)
+# targets
 
-ALL_CODE_FILES := $(ALL_C_FILES) $(ALL_H_FILES)
-# target files
+libtrycatch.a: $(SRC_OBJ_FILES) sublib-objs
+	ar rcs libtrycatch.a $(SRC_OBJ_FILES) build/sublib-objs/*.o
 
-libtrycatch.a: $(SRC_OBJ_FILES) $(SUBLIBS)
-	ar rcs libtrycatch.a $(SRC_OBJ_FILES)
-
-build/src/%.o: src/%.c $(SRC_C_FILES) $(SRC_H_FILES) | build
-	$(COMPILE) -c -o $@ $<
-
-build/tests/%.o: tests/%.c $(TESTS_C_FILES) $(TESTS_H_FILES) | build
-	$(COMPILE) -c -o $@ $<
-
-test_error: build/tests/custom_error.o $(SUBLIBS)
-	$(COMPILE) -o $@ tests/test_error.c build/tests/custom_error.o $(LDFLAGS)
-
-test_try_catch:
-	$(COMPILE) -o $@ tests/test_try_catch.c build/tests/custom_error.o $(LDFLAGS)
-
-libstack.a:
+sublib-objs: | build
 	$(MAKE) -C c-lib-stack libstack.a
-
-# target directories
+	ar x c-lib-stack/libstack.a --output build/sublib-objs
 
 build:
-	mkdir -p build
+	mkdir -p build/sublib-objs
 	mkdir -p build/src
 	mkdir -p build/tests
+
+build/src/%.o: src/%.c | build
+	$(COMPILE) -c -o $@ $<
+
+build/tests/%.o: tests/%.c $(CODE_FILES) | build
+	$(COMPILE) -c -o $@ $<
+
+test_error test_try_catch: build/tests/custom_error.o libtrycatch.a
+	$(COMPILE) -o $@ tests/$@.c build/tests/custom_error.o $(LDFLAGS)
+
+tests: test_error test_try_catch
 
 # phony targets
 
@@ -87,4 +70,4 @@ clean:
 	rm -rf build
 	$(MAKE) -C c-lib-stack clean
 
-.PHONY: install uninstall clean tests lib
+.PHONY: install uninstall clean tests lib sublib-objs
