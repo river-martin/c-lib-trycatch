@@ -12,12 +12,14 @@ EXTRA     := -std=c11 -fPIC
 CFLAGS    := $(DEBUG) $(OPTIMISE) $(WARNING) $(EXTRA)
 DFLAGS    ?= # -DDEBUG
 
+# library dependencies
+SUBLIBFLAGS := $(shell git submodule foreach --recursive --quiet 'echo -L$$displaypath')
+SUBLIBFLAGS += -lstack
+SUBLIBS := libstack.a
+
 # linker flags
 
-LDFLAGS := $(ASAN_FLAGS) -ltrycatch -Lc-lib-stack/build -lstack
-
-# library dependencies
-LIBSTACK := c-lib-stack/build/libstack.a
+LDFLAGS := $(ASAN_FLAGS) -L. -ltrycatch $(SUBLIBFLAGS)
 
 # commands
 
@@ -25,7 +27,7 @@ COMPILE:=$(CC) $(CFLAGS) $(DFLAGS)
 
 # targets
 
-lib: build build/libtrycatch.a
+lib: libtrycatch.a
 
 tests: build $(ALL_OBJ_FILES) test_error test_try_catch
 
@@ -44,8 +46,8 @@ ALL_OBJ_FILES := $(SRC_OBJ_FILES) $(TESTS_OBJ_FILES)
 ALL_CODE_FILES := $(ALL_C_FILES) $(ALL_H_FILES)
 # target files
 
-build/libtrycatch.a: $(SRC_OBJ_FILES) $(LIBSTACK) | build
-	ar rcs build/libtrycatch.a $(SRC_OBJ_FILES)
+libtrycatch.a: $(SRC_OBJ_FILES) $(SUBLIBS)
+	ar rcs libtrycatch.a $(SRC_OBJ_FILES)
 
 build/src/%.o: src/%.c $(SRC_C_FILES) $(SRC_H_FILES) | build
 	$(COMPILE) -c -o $@ $<
@@ -53,14 +55,14 @@ build/src/%.o: src/%.c $(SRC_C_FILES) $(SRC_H_FILES) | build
 build/tests/%.o: tests/%.c $(TESTS_C_FILES) $(TESTS_H_FILES) | build
 	$(COMPILE) -c -o $@ $<
 
-test_error: build/tests/custom_error.o
-	$(COMPILE) -o $@ tests/test_error.c build/tests/custom_error.o $(LDFLAGS) -ltrycatch
+test_error: build/tests/custom_error.o $(SUBLIBS)
+	$(COMPILE) -o $@ tests/test_error.c build/tests/custom_error.o $(LDFLAGS)
 
 test_try_catch:
-	$(COMPILE) -o $@ tests/test_try_catch.c build/tests/custom_error.o $(LDFLAGS) -ltrycatch
+	$(COMPILE) -o $@ tests/test_try_catch.c build/tests/custom_error.o $(LDFLAGS)
 
-$(LIBSTACK):
-	$(MAKE) -C c-lib-stack build/libstack.a
+libstack.a:
+	$(MAKE) -C c-lib-stack libstack.a
 
 # target directories
 
@@ -71,10 +73,10 @@ build:
 
 # phony targets
 
-install: build/libtrycatch.a src/trycatch.h
+install: libtrycatch.a src/trycatch.h
 	install -d /usr/local/lib /usr/local/include
 	# Octal permissions: 6 = rw-, 4 = r--
-	install -m 644 build/libtrycatch.a /usr/local/lib
+	install -m 644 libtrycatch.a /usr/local/lib
 	install -m 644 src/trycatch.h /usr/local/include
 
 uninstall:
