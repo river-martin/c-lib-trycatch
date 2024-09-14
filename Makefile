@@ -31,15 +31,15 @@ TESTS_OBJ_FILES := $(patsubst tests/%.c, build/tests/%.o, $(TESTS_C_FILES))
 
 # targets
 
-libtrycatch.a: $(SRC_OBJ_FILES) sublib-objs
-	ar rcs libtrycatch.a $(SRC_OBJ_FILES) build/sublib-objs/*.o
+libtrycatch.a: $(SRC_OBJ_FILES) dep-objs
+	ar rcs libtrycatch.a $(SRC_OBJ_FILES) build/dep-objs/*.o
 
-sublib-objs: | build
+dep-objs: | build
 	$(MAKE) -C c-lib-stack libstack.a
-	ar x c-lib-stack/libstack.a --output build/sublib-objs
+	ar x c-lib-stack/libstack.a --output build/dep-objs
 
 build:
-	mkdir -p build/sublib-objs
+	mkdir -p build/dep-objs
 	mkdir -p build/src
 	mkdir -p build/tests
 
@@ -70,4 +70,4 @@ clean:
 	rm -rf build
 	$(MAKE) -C c-lib-stack clean
 
-.PHONY: install uninstall clean tests lib sublib-objs
+.PHONY: install uninstall clean tests lib dep-objs
