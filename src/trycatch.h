@@ -24,7 +24,7 @@
  * Usage: `try { ... } catch(err_type, err_ident) { ... }`
  */
 #define try                                      \
-    push(&__env_stack, malloc(sizeof(jmp_buf))); \
+    vp_stack_push(&__env_stack, malloc(sizeof(jmp_buf))); \
     if (setjmp(__peek_jmp_buf(__env_stack)) == 0)
 
 /**
@@ -39,7 +39,7 @@
     else if (__error && (strcmp(#err_type, __error->type_name) ==           \
                          0)) for (err_type err_ident = *__error;            \
                                   __error ? (free(__error), __error = NULL, \
-                                             pop(&__env_stack), true)       \
+                                             vp_stack_pop(&__env_stack), true)       \
                                           : false;)
 
 /**
@@ -133,7 +133,7 @@ extern Error *volatile __error;
 // Used in error messages
 extern const char *__progname;
 
-extern vp_stack_t __env_stack;
+extern vp_stack __env_stack;
 
 extern jmp_buf *volatile __try_env;
 

@@ -14,7 +14,10 @@ DFLAGS    ?= # -DDEBUG
 
 # linker flags
 
-LDFLAGS := $(ASAN_FLAGS) -ltrycatch -lstack
+LDFLAGS := $(ASAN_FLAGS) -ltrycatch -Lc-lib-stack/build -lstack
+
+# library dependencies
+LIBSTACK := c-lib-stack/build/libstack.a
 
 # commands
 
@@ -41,7 +44,7 @@ ALL_OBJ_FILES := $(SRC_OBJ_FILES) $(TESTS_OBJ_FILES)
 ALL_CODE_FILES := $(ALL_C_FILES) $(ALL_H_FILES)
 # target files
 
-build/libtrycatch.a: $(SRC_OBJ_FILES) | build
+build/libtrycatch.a: $(SRC_OBJ_FILES) $(LIBSTACK) | build
 	ar rcs build/libtrycatch.a $(SRC_OBJ_FILES)
 
 build/src/%.o: src/%.c $(SRC_C_FILES) $(SRC_H_FILES) | build
@@ -55,6 +58,9 @@ test_error: build/tests/custom_error.o
 
 test_try_catch:
 	$(COMPILE) -o $@ tests/test_try_catch.c build/tests/custom_error.o $(LDFLAGS) -ltrycatch
+
+$(LIBSTACK):
+	$(MAKE) -C c-lib-stack build/libstack.a
 
 # target directories
 
@@ -77,5 +83,6 @@ uninstall:
 clean:
 	rm -f test_error test_try_catch
 	rm -rf build
+	$(MAKE) -C c-lib-stack clean
 
 .PHONY: install uninstall clean tests lib

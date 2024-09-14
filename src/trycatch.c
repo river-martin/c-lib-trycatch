@@ -7,7 +7,7 @@
 /**
  * @brief A stack of jmp_bufs (needed to support nested try-catch blocks).
  */
-vp_stack_t __env_stack = { .top = NULL };
+vp_stack __env_stack = { .top = NULL };
 
 Error *volatile __error = NULL;
 
