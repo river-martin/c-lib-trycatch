@@ -12,9 +12,6 @@ EXTRA     := -std=c11 -fPIC
 CFLAGS    := $(DEBUG) $(OPTIMISE) $(WARNING) $(EXTRA)
 DFLAGS    ?= # -DDEBUG
 
-# dependencies
-DEPS := c-lib-stack/libstack.a
-
 # linker flags
 
 LDFLAGS := $(ASAN_FLAGS) -L. -ltrycatch
@@ -26,13 +23,14 @@ COMPILE:=$(CC) $(CFLAGS) $(DFLAGS)
 # files
 
 CODE_FILES := $(wildcard src/*.c src/*.h tests/*.c tests/*.h)
-SRC_OBJ_FILES := $(patsubst src/%.c, build/src/%.o, $(SRC_C_FILES))
-TESTS_OBJ_FILES := $(patsubst tests/%.c, build/tests/%.o, $(TESTS_C_FILES))
+SRC_OBJ_FILES := $(patsubst src/%.c, build/src/%.o, $(wildcard src/*.c))
+TESTS_OBJ_FILES := $(patsubst tests/%.c, build/tests/%.o, $(wildcard tests/*.c))
 
 # targets
 
 libtrycatch.a: $(SRC_OBJ_FILES) dep-objs
-	ar rcs libtrycatch.a $(SRC_OBJ_FILES) build/dep-objs/*.o
+	ar rcs libtrycatch.a $(SRC_OBJ_FILES) $(wildcard build/dep-objs/*.o)
+	ar t libtrycatch.a
 
 dep-objs: | build
 	$(MAKE) -C c-lib-stack libstack.a
@@ -68,6 +66,7 @@ uninstall:
 clean:
 	rm -f test_error test_try_catch
 	rm -rf build
+	rm -f libtrycatch.a
 	$(MAKE) -C c-lib-stack clean
 
 .PHONY: install uninstall clean tests lib dep-objs
